@@ -13,6 +13,7 @@ let appState = {
     currentView: 'categories',
     currentMonth: new Date(),
     selectedDate: null,
+    priorityMap: { 'low': 'medium', 'medium': 'high', 'high': 'low' }, // Priority cycle
 };
 
 // Load state from localStorage on init
@@ -177,7 +178,7 @@ function renderCategories() {
 
 function createCategoryCard(category) {
     const card = document.createElement('div');
-    card.className = 'category-card';
+    card.className = `category-card ${category.color}`;
     
     const categoryTasks = appState.tasks.filter(t => t.category_id === category.id);
     const activeTasks = categoryTasks.filter(t => t.status === 'active');
@@ -186,7 +187,6 @@ function createCategoryCard(category) {
     card.innerHTML = `
         <div class="category-header">
             <h3 class="category-name">${escapeHtml(category.name)}</h3>
-            <div class="category-color-dot ${category.color}"></div>
         </div>
 
         <div class="category-tasks">
@@ -216,12 +216,17 @@ function createCategoryCard(category) {
     // Add event listeners for quick task add
     const quickInput = card.querySelector('.task-quick-add');
     quickInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.ctrlKey) {
             e.preventDefault();
-            addTaskQuick(category.id, quickInput.value);
+            const title = quickInput.value.trim();
+            if (title) {
+                addTaskQuick(category.id, title);
+                quickInput.value = '';
+                quickInput.focus(); // Keep focus on input for continuous entry
+            }
+        } else if (e.key === 'Escape' || (e.key === 'Enter' && e.ctrlKey)) {
             quickInput.value = '';
-        } else if (e.key === 'Escape') {
-            quickInput.value = '';
+            quickInput.blur();
         }
     });
 
@@ -235,8 +240,29 @@ function createCategoryCard(category) {
 
     card.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const taskId = e.target.closest('.task-item').dataset.taskId;
+            const taskId = btn.dataset.taskId;
             deleteTask(taskId);
+        });
+    });
+
+    card.querySelectorAll('.btn-date').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const taskId = btn.dataset.taskId;
+            openDatePicker(taskId);
+        });
+    });
+
+    card.querySelectorAll('.btn-clock').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const taskId = btn.dataset.taskId;
+            openEstimatePicker(taskId);
+        });
+    });
+
+    card.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const taskId = btn.dataset.taskId;
+            editTask(taskId);
         });
     });
 
@@ -244,28 +270,32 @@ function createCategoryCard(category) {
 }
 
 function createTaskElement(task) {
-    const priorityIcon = getPriorityIcon(task);
     const taskDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : '';
-    const taskHours = task.estimated_hours ? `⏱ ${task.estimated_hours}h` : '';
+    const taskHours = task.estimated_hours ? `${task.estimated_hours}h` : '';
+    const priority = task.priority || 'low';
     
     return `
         <div class="task-item ${task.status === 'completed' ? 'completed' : ''}" data-task-id="${task.id}">
             <div class="task-checkbox-wrapper">
                 <input type="checkbox" class="task-checkbox" ${task.status === 'completed' ? 'checked' : ''}>
-                <span class="task-priority-indicator">${priorityIcon}</span>
+            </div>
+            <div class="task-actions-left">
+                <button class="btn-icon btn-date" title="Add dates" data-action="date" data-task-id="${task.id}">📅</button>
+                <button class="btn-icon btn-clock" title="Estimate time" data-action="estimate" data-task-id="${task.id}">⏱</button>
+                <button class="priority-tag" title="Toggle priority" data-priority="${priority}" data-task-id="${task.id}" onclick="cyclePriority('${task.id}')">${priority.charAt(0).toUpperCase() + priority.slice(1)}</button>
             </div>
             <div class="task-content">
                 <h4 class="task-title">${escapeHtml(task.title)}</h4>
                 ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
                 <div class="task-meta">
                     ${taskDate ? `<span class="task-date">📅 ${taskDate}</span>` : ''}
-                    ${taskHours ? `<span class="task-hours">${taskHours}</span>` : ''}
+                    ${taskHours ? `<span class="task-hours">⏱ ${taskHours}</span>` : ''}
                     ${task.is_recurring ? '<span class="task-recurring">🔁 Recurring</span>' : ''}
                 </div>
             </div>
             <div class="task-actions">
-                <button class="btn-icon btn-edit">✏️</button>
-                <button class="btn-icon btn-delete">🗑</button>
+                <button class="btn-icon btn-edit" data-task-id="${task.id}">✏️</button>
+                <button class="btn-icon btn-delete" data-task-id="${task.id}">🗑</button>
             </div>
         </div>
     `;
@@ -284,6 +314,7 @@ function addTaskQuick(categoryId, title) {
         due_date: null,
         start_by: null,
         estimated_hours: 0,
+        priority: 'low',
         priority_score: calculatePriority(null, null, 0),
         is_recurring: false,
         recurrence_days: [],
@@ -340,6 +371,84 @@ function deleteCategory(categoryId) {
 }
 
 // ===========================
+// TASK INTERACTION HANDLERS
+// ===========================
+
+function openDatePicker(taskId) {
+    const task = appState.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const dueDateInput = prompt('Enter due date (YYYY-MM-DD):',  task.due_date || '');
+    if (dueDateInput !== null) {
+        if (dueDateInput && /^\d{4}-\d{2}-\d{2}$/.test(dueDateInput)) {
+            task.due_date = dueDateInput;
+            task.priority_score = calculatePriority(dueDateInput, task.start_by, task.estimated_hours);
+            saveState();
+            renderCategories();
+            renderToday();
+            renderCalendar();
+        } else if (dueDateInput === '') {
+            task.due_date = null;
+            task.priority_score = calculatePriority(null, task.start_by, task.estimated_hours);
+            saveState();
+            renderCategories();
+            renderToday();
+            renderCalendar();
+        } else {
+            alert('Invalid date format. Use YYYY-MM-DD');
+        }
+    }
+}
+
+function openEstimatePicker(taskId) {
+    const task = appState.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const hours = prompt('Estimated hours (e.g., 1.5):', task.estimated_hours || '');
+    if (hours !== null) {
+        const numHours = parseFloat(hours);
+        if (isNaN(numHours)) {
+            alert('Please enter a valid number');
+        } else {
+            task.estimated_hours = numHours >= 0 ? numHours : 0;
+            task.priority_score = calculatePriority(task.due_date, task.start_by, task.estimated_hours);
+            saveState();
+            renderCategories();
+            renderToday();
+            renderCalendar();
+        }
+    }
+}
+
+function cyclePriority(taskId) {
+    const task = appState.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const priorities = ['low', 'medium', 'high'];
+    const currentIndex = priorities.indexOf(task.priority || 'low');
+    task.priority = priorities[(currentIndex + 1) % priorities.length];
+    
+    saveState();
+    renderCategories();
+    renderToday();
+    renderCalendar();
+}
+
+function editTask(taskId) {
+    const task = appState.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const newTitle = prompt('Edit task title:', task.title);
+    if (newTitle !== null && newTitle.trim()) {
+        task.title = newTitle.trim();
+        saveState();
+        renderCategories();
+        renderToday();
+        renderCalendar();
+    }
+}
+
+// ===========================
 // TODAY VIEW
 // ===========================
 
@@ -352,18 +461,45 @@ function renderToday() {
     });
     document.getElementById('todayDate').textContent = today;
 
-    const todayParams = getTodayTasks();
+    const groupedTasks = getTodayTasksGrouped();
     const container = document.getElementById('todayTasksContainer');
 
-    if (todayParams.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px; grid-column: 1/-1;">No tasks for today. Great job! 🎉</p>';
-    } else {
-        container.innerHTML = todayParams.map(task => createTodayTaskElement(task)).join('');
+    let html = '';
+
+    // Due Today or Overdue
+    if (groupedTasks.dueToday.length > 0) {
+        html += '<div class="task-group">';
+        html += '<h3 style="color: #FF6B6B; font-size: 0.9rem; margin-bottom: 0.5rem; text-transform: uppercase;">Due Today or Overdue</h3>';
+        html += groupedTasks.dueToday.map(task => createTodayTaskElement(task)).join('');
+        html += '</div>';
     }
 
+    // Future Due Dates
+    if (groupedTasks.futureDue.length > 0) {
+        html += '<div class="task-group">';
+        html += '<h3 style="color: #FFD93D; font-size: 0.9rem; margin-bottom: 0.5rem; text-transform: uppercase;">Future Due Dates</h3>';
+        html += groupedTasks.futureDue.map(task => createTodayTaskElement(task)).join('');
+        html += '</div>';
+    }
+
+    // No Due Date
+    if (groupedTasks.noDueDate.length > 0) {
+        html += '<div class="task-group" style="border-top: 2px solid #E5E5E5; padding-top: 1rem; margin-top: 1rem;">';
+        html += '<h3 style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; text-transform: uppercase;">No Due Date</h3>';
+        html += groupedTasks.noDueDate.map(task => createTodayTaskElement(task)).join('');
+        html += '</div>';
+    }
+
+    if (!html) {
+        html = '<p style="text-align: center; color: #999; padding: 40px;">No tasks. Great job! 🎉</p>';
+    }
+
+    container.innerHTML = html;
+
     // Update stats
-    document.getElementById('todayTaskCount').textContent = todayParams.length;
-    const totalHours = todayParams.reduce((sum, t) => sum + (t.estimated_hours || 0), 0);
+    const allTasks = [...groupedTasks.dueToday, ...groupedTasks.futureDue, ...groupedTasks.noDueDate];
+    document.getElementById('todayTaskCount').textContent = allTasks.length;
+    const totalHours = allTasks.reduce((sum, t) => sum + (t.estimated_hours || 0), 0);
     document.getElementById('todayHoursCount').textContent = totalHours.toFixed(1);
 
     // Add event listeners
@@ -376,51 +512,88 @@ function renderToday() {
 
     container.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const taskId = e.target.closest('.task-item').dataset.taskId;
+            const taskId = btn.dataset.taskId;
             deleteTask(taskId);
+        });
+    });
+
+    container.querySelectorAll('.btn-date').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const taskId = btn.dataset.taskId;
+            openDatePicker(taskId);
+        });
+    });
+
+    container.querySelectorAll('.btn-clock').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const taskId = btn.dataset.taskId;
+            openEstimatePicker(taskId);
+        });
+    });
+
+    container.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const taskId = btn.dataset.taskId;
+            editTask(taskId);
         });
     });
 }
 
-function getTodayTasks() {
+function getTodayTasksGrouped() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return appState.tasks
-        .filter(task => {
-            if (task.status !== 'active') return false;
-            
-            const dueDate = task.due_date ? new Date(task.due_date) : null;
-            const startDate = task.start_by ? new Date(task.start_by) : null;
-            
-            dueDate?.setHours(0, 0, 0, 0);
-            startDate?.setHours(0, 0, 0, 0);
-            
-            return (dueDate && dueDate <= today) || (startDate && startDate <= today) || task.appears_in_today;
-        })
-        .sort((a, b) => {
-            // Sort by priority score (lower is higher priority)
-            if (a.priority_score !== b.priority_score) {
-                return a.priority_score - b.priority_score;
-            }
-            // Then by due date
-            const aDate = a.due_date ? new Date(a.due_date) : new Date(8640000000000000);
-            const bDate = b.due_date ? new Date(b.due_date) : new Date(8640000000000000);
-            return aDate - bDate;
-        });
+    const activeTasks = appState.tasks.filter(task => task.status === 'active');
+
+    const dueToday = activeTasks.filter(task => {
+        if (!task.due_date) return false;
+        const dueDate = new Date(task.due_date);
+        dueDate.setHours(0, 0, 0, 0);
+        return dueDate <= today;
+    }).sort((a, b) => {
+        const aDate = new Date(a.due_date || 0);
+        const bDate = new Date(b.due_date || 0);
+        return aDate - bDate;
+    });
+
+    const futureDue = activeTasks.filter(task => {
+        if (!task.due_date) return false;
+        const dueDate = new Date(task.due_date);
+        dueDate.setHours(0, 0, 0, 0);
+        return dueDate > today;
+    }).sort((a, b) => {
+        const aDate = new Date(a.due_date);
+        const bDate = new Date(b.due_date);
+        return aDate - bDate;
+    });
+
+    const noDueDate = activeTasks.filter(task => !task.due_date).sort((a, b) => {
+        // Sort by priority
+        if (a.priority !== b.priority) {
+            const priorityOrder = { 'high': 0, 'medium': 1, 'low': 2 };
+            return (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2);
+        }
+        return 0;
+    });
+
+    return { dueToday, futureDue, noDueDate };
 }
 
 function createTodayTaskElement(task) {
     const category = appState.categories.find(c => c.id === task.category_id);
-    const priorityIcon = getPriorityIcon(task);
     const taskDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : '';
-    const taskHours = task.estimated_hours ? `⏱ ${task.estimated_hours}h` : '';
+    const taskHours = task.estimated_hours ? `${task.estimated_hours}h` : '';
+    const priority = task.priority || 'low';
 
     return `
         <div class="task-item ${task.status === 'completed' ? 'completed' : ''}" data-task-id="${task.id}">
             <div class="task-checkbox-wrapper">
                 <input type="checkbox" class="task-checkbox" ${task.status === 'completed' ? 'checked' : ''}>
-                <span class="task-priority-indicator">${priorityIcon}</span>
+            </div>
+            <div class="task-actions-left">
+                <button class="btn-icon btn-date" title="Add dates" data-action="date" data-task-id="${task.id}">📅</button>
+                <button class="btn-icon btn-clock" title="Estimate time" data-action="estimate" data-task-id="${task.id}">⏱</button>
+                <button class="priority-tag" title="Toggle priority" data-priority="${priority}" data-task-id="${task.id}" onclick="cyclePriority('${task.id}')">${priority.charAt(0).toUpperCase() + priority.slice(1)}</button>
             </div>
             <div class="task-content">
                 <h4 class="task-title">${escapeHtml(task.title)}</h4>
@@ -428,13 +601,13 @@ function createTodayTaskElement(task) {
                 <div class="task-meta">
                     <span class="category-badge" style="background: var(--${category.color}); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">${escapeHtml(category.name)}</span>
                     ${taskDate ? `<span class="task-date">📅 ${taskDate}</span>` : ''}
-                    ${taskHours ? `<span class="task-hours">${taskHours}</span>` : ''}
+                    ${taskHours ? `<span class="task-hours">⏱ ${taskHours}</span>` : ''}
                     ${task.is_recurring ? '<span class="task-recurring">🔁 Recurring</span>' : ''}
                 </div>
             </div>
             <div class="task-actions">
-                <button class="btn-icon btn-edit">✏️</button>
-                <button class="btn-icon btn-delete">🗑</button>
+                <button class="btn-icon btn-edit" data-task-id="${task.id}">✏️</button>
+                <button class="btn-icon btn-delete" data-task-id="${task.id}">🗑</button>
             </div>
         </div>
     `;
@@ -527,17 +700,40 @@ function selectCalendarDay(dateStr) {
     document.getElementById('calendarTaskPanel').classList.remove('hidden');
 
     // Add event listeners
-    document.getElementById('calendarTaskPanel').querySelectorAll('.task-checkbox').forEach(checkbox => {
+    const panel = document.getElementById('calendarTaskPanel');
+    
+    panel.querySelectorAll('.task-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', (e) => {
             const taskId = e.target.closest('.task-item').dataset.taskId;
             toggleTaskComplete(taskId);
         });
     });
 
-    document.getElementById('calendarTaskPanel').querySelectorAll('.btn-delete').forEach(btn => {
+    panel.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const taskId = e.target.closest('.task-item').dataset.taskId;
+            const taskId = btn.dataset.taskId;
             deleteTask(taskId);
+        });
+    });
+
+    panel.querySelectorAll('.btn-date').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const taskId = btn.dataset.taskId;
+            openDatePicker(taskId);
+        });
+    });
+
+    panel.querySelectorAll('.btn-clock').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const taskId = btn.dataset.taskId;
+            openEstimatePicker(taskId);
+        });
+    });
+
+    panel.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const taskId = btn.dataset.taskId;
+            editTask(taskId);
         });
     });
 }

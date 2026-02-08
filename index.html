@@ -12,7 +12,6 @@
         <div class="login-container">
             <div class="login-card">
                 <div class="login-header">
-                    <div class="logo">🎯</div>
                     <h1>Pastel Priority</h1>
                     <p>Organize your tasks with calm</p>
                 </div>
@@ -64,7 +63,7 @@
         <!-- Top Navigation -->
         <nav class="navbar">
             <div class="nav-left">
-                <div class="logo-app">🎯 Pastel Priority</div>
+                <div class="logo-app">Pastel Priority</div>
             </div>
             <div class="nav-center">
                 <button class="nav-btn active" data-view="categories">Categories</button>
@@ -223,7 +222,11 @@
         <div class="task-item" data-task-id="">
             <div class="task-checkbox-wrapper">
                 <input type="checkbox" class="task-checkbox">
-                <span class="task-priority-indicator"></span>
+            </div>
+            <div class="task-actions-left">
+                <button class="btn-icon btn-date" title="Add dates" data-action="date">📅</button>
+                <button class="btn-icon btn-clock" title="Estimate time" data-action="estimate">⏱</button>
+                <button class="priority-tag" title="Toggle priority" data-priority="low">Low</button>
             </div>
             <div class="task-content">
                 <h4 class="task-title"></h4>

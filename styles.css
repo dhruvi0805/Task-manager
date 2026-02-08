@@ -253,8 +253,8 @@ body {
 }
 
 .logo {
-    font-size: 3rem;
-    margin-bottom: var(--spacing-md);
+    font-size: 1rem;
+    margin-bottom: 0;
 }
 
 .login-header h1 {
@@ -406,7 +406,6 @@ body {
 }
 
 .category-card {
-    background: var(--white);
     border-radius: var(--radius-lg);
     padding: var(--spacing-lg);
     box-shadow: var(--shadow-md);
@@ -457,7 +456,38 @@ body {
     gap: var(--spacing-md);
 }
 
-.task-item {
+.priority-tag {
+    background: #FFD93D;
+    color: var(--text-dark);
+    border: none;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.priority-tag:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+}
+
+.priority-tag[data-priority="high"] {
+    background: #FF6B6B;
+    color: white;
+}
+
+.priority-tag[data-priority="medium"] {
+    background: #FFD93D;
+    color: var(--text-dark);
+}
+
+.priority-tag[data-priority="low"] {
+    background: #6BCB77;
+    color: white;
+}
     background: var(--light-gray);
     padding: var(--spacing-md);
     border-radius: var(--radius-md);
@@ -467,8 +497,15 @@ body {
     transition: all 0.2s ease;
 }
 
-.task-item:hover {
-    background: var(--medium-gray);
+.btn-date,
+.btn-clock {
+    font-size: 1rem;
+    color: var(--dark-gray);
+}
+
+.btn-date:hover,
+.btn-clock:hover {
+    color: var(--text-dark);
 }
 
 .task-item.completed {
@@ -492,11 +529,14 @@ body {
     height: 20px;
     cursor: pointer;
     accent-color: var(--upcoming);
+    flex-shrink: 0;
 }
 
-.task-priority-indicator {
-    font-size: 0.8rem;
-    min-width: 16px;
+.task-actions-left {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .task-content {
@@ -562,28 +602,27 @@ body {
     font-size: 0.85rem;
 }
 
-/* Pastel Background Colors for Categories */
-.pastel-rose {
+.category-card.pastel-rose {
     background-color: var(--pastel-rose);
 }
 
-.pastel-peach {
+.category-card.pastel-peach {
     background-color: var(--pastel-peach);
 }
 
-.pastel-yellow {
+.category-card.pastel-yellow {
     background-color: var(--pastel-yellow);
 }
 
-.pastel-mint {
+.category-card.pastel-mint {
     background-color: var(--pastel-mint);
 }
 
-.pastel-blue {
+.category-card.pastel-blue {
     background-color: var(--pastel-blue);
 }
 
-.pastel-lavender {
+.category-card.pastel-lavender {
     background-color: var(--pastel-lavender);
 }
 
@@ -826,6 +865,16 @@ body {
 #panelDateHeader {
     margin-bottom: var(--spacing-lg);
     color: var(--text-dark);
+}
+
+/* Task Groups in Today View */
+.task-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.task-group h3 {
+    border-bottom: 1px solid var(--medium-gray);
+    padding-bottom: var(--spacing-sm);
 }
 
 /* ===========================
