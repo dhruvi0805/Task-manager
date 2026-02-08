@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastel Priority - Task Manager</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login View -->
+    <div id="loginView" class="view active">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <div class="logo">🎯</div>
+                    <h1>Pastel Priority</h1>
+                    <p>Organize your tasks with calm</p>
+                </div>
+                
+                <form id="loginForm" class="login-form">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" placeholder="your@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+                </form>
+
+                <div class="auth-toggle">
+                    <p>Don't have an account? <button type="button" id="toggleSignup" class="link-btn">Sign up</button></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sign Up Form (Hidden by default) -->
+        <div id="signupOverlay" class="signup-overlay hidden">
+            <div class="signup-card">
+                <button type="button" class="close-btn" id="closeSignup">&times;</button>
+                <h2>Create Account</h2>
+                <form id="signupForm" class="login-form">
+                    <div class="form-group">
+                        <label for="signupName">Full Name</label>
+                        <input type="text" id="signupName" placeholder="Your Name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupEmail">Email</label>
+                        <input type="email" id="signupEmail" placeholder="your@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupPassword">Password</label>
+                        <input type="password" id="signupPassword" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App View -->
+    <div id="appView" class="view">
+        <!-- Top Navigation -->
+        <nav class="navbar">
+            <div class="nav-left">
+                <div class="logo-app">🎯 Pastel Priority</div>
+            </div>
+            <div class="nav-center">
+                <button class="nav-btn active" data-view="categories">Categories</button>
+                <button class="nav-btn" data-view="today">Today</button>
+                <button class="nav-btn" data-view="calendar">Calendar</button>
+            </div>
+            <div class="nav-right">
+                <span id="userDisplay" class="user-display"></span>
+                <button id="logoutBtn" class="btn btn-secondary btn-sm">Logout</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-container">
+            <!-- Categories View -->
+            <div id="categoriesView" class="view-content active">
+                <div class="view-header">
+                    <h2>My Categories</h2>
+                    <button id="addCategoryBtn" class="btn btn-primary">+ New Category</button>
+                </div>
+
+                <!-- Add Category Modal -->
+                <div id="categoryModal" class="modal hidden">
+                    <div class="modal-content">
+                        <h3>Create Category</h3>
+                        <form id="categoryForm">
+                            <div class="form-group">
+                                <label for="categoryName">Category Name</label>
+                                <input type="text" id="categoryName" placeholder="e.g., Work, School" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="categoryColor">Color</label>
+                                <div class="color-picker">
+                                    <input type="radio" name="color" value="pastel-rose" id="color-rose" checked>
+                                    <label for="color-rose" class="color-option pastel-rose"></label>
+                                    
+                                    <input type="radio" name="color" value="pastel-peach" id="color-peach">
+                                    <label for="color-peach" class="color-option pastel-peach"></label>
+                                    
+                                    <input type="radio" name="color" value="pastel-yellow" id="color-yellow">
+                                    <label for="color-yellow" class="color-option pastel-yellow"></label>
+                                    
+                                    <input type="radio" name="color" value="pastel-mint" id="color-mint">
+                                    <label for="color-mint" class="color-option pastel-mint"></label>
+                                    
+                                    <input type="radio" name="color" value="pastel-blue" id="color-blue">
+                                    <label for="color-blue" class="color-option pastel-blue"></label>
+                                    
+                                    <input type="radio" name="color" value="pastel-lavender" id="color-lavender">
+                                    <label for="color-lavender" class="color-option pastel-lavender"></label>
+                                </div>
+                            </div>
+                            <div class="modal-buttons">
+                                <button type="submit" class="btn btn-primary">Create</button>
+                                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Categories Grid -->
+                <div id="categoriesGrid" class="categories-grid">
+                    <!-- Categories will be dynamically added here -->
+                </div>
+            </div>
+
+            <!-- Today View -->
+            <div id="todayView" class="view-content">
+                <div class="view-header">
+                    <h2>Today's To-Do</h2>
+                    <div class="date-display" id="todayDate"></div>
+                </div>
+
+                <div class="today-container">
+                    <div class="today-list">
+                        <div id="todayTasksContainer" class="tasks-list">
+                            <!-- Tasks for today will be shown here -->
+                        </div>
+                    </div>
+
+                    <div class="today-sidebar">
+                        <div class="stats-card">
+                            <h3>Today's Stats</h3>
+                            <div class="stat">
+                                <span class="stat-label">Tasks</span>
+                                <span class="stat-value" id="todayTaskCount">0</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">Estimated Hours</span>
+                                <span class="stat-value" id="todayHoursCount">0</span>
+                            </div>
+                        </div>
+
+                        <div class="priority-indicators">
+                            <h3>Priority Levels</h3>
+                            <div class="indicator">
+                                <span class="indicator-icon">🔴</span>
+                                <span>Overdue</span>
+                            </div>
+                            <div class="indicator">
+                                <span class="indicator-icon">🟡</span>
+                                <span>Due Today</span>
+                            </div>
+                            <div class="indicator">
+                                <span class="indicator-icon">🟢</span>
+                                <span>Upcoming</span>
+                            </div>
+                            <div class="indicator">
+                                <span class="indicator-icon">🔁</span>
+                                <span>Recurring</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar View -->
+            <div id="calendarView" class="view-content">
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <button id="prevMonth" class="btn-icon">←</button>
+                        <h2 id="currentMonth"></h2>
+                        <button id="nextMonth" class="btn-icon">→</button>
+                    </div>
+
+                    <div class="calendar-grid">
+                        <div class="calendar-weekdays">
+                            <div class="weekday">Sun</div>
+                            <div class="weekday">Mon</div>
+                            <div class="weekday">Tue</div>
+                            <div class="weekday">Wed</div>
+                            <div class="weekday">Thu</div>
+                            <div class="weekday">Fri</div>
+                            <div class="weekday">Sat</div>
+                        </div>
+                        <div id="calendarDays" class="calendar-days">
+                            <!-- Calendar days will be generated here -->
+                        </div>
+                    </div>
+
+                    <!-- Task detail panel for calendar -->
+                    <div id="calendarTaskPanel" class="task-panel hidden">
+                        <button class="close-btn" onclick="closeTaskPanel()">&times;</button>
+                        <h3 id="panelDateHeader"></h3>
+                        <div id="panelTasksList" class="panel-tasks-list">
+                            <!-- Tasks for selected day -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Item Template (used by JavaScript) -->
+    <template id="taskTemplate">
+        <div class="task-item" data-task-id="">
+            <div class="task-checkbox-wrapper">
+                <input type="checkbox" class="task-checkbox">
+                <span class="task-priority-indicator"></span>
+            </div>
+            <div class="task-content">
+                <h4 class="task-title"></h4>
+                <p class="task-description"></p>
+                <div class="task-meta">
+                    <span class="task-date"></span>
+                    <span class="task-hours"></span>
+                </div>
+            </div>
+            <div class="task-actions">
+                <button class="btn-icon btn-edit" title="Edit task">✏️</button>
+                <button class="btn-icon btn-delete" title="Delete task">🗑</button>
+            </div>
+        </div>
+    </template>
+
+    <script src="script.js"></script>
+</body>
+</html>
